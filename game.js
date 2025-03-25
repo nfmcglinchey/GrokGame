@@ -3,9 +3,11 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const gameOverText = document.getElementById('gameOver');
 
+// Check for canvas support
 if (!canvas || !ctx) {
     alert("Canvas not supported on this device.");
-    return;
+    // Stop execution without using return
+    throw new Error("Canvas not supported");
 }
 
 // Canvas sizing
@@ -305,7 +307,7 @@ function update() {
     if (level.door) {
         ctx.fillStyle = '#8B4513';
         ctx.fillRect(level.door.x * scaleX - scrollOffset, level.door.y * scaleY, level.door.width * scaleX, level.door.height * scaleY);
-    });
+    }
 
     // HUD
     ctx.fillStyle = '#FFFFFF';
