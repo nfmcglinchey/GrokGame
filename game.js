@@ -95,43 +95,47 @@ const leftBtn = document.getElementById('leftBtn');
 const rightBtn = document.getElementById('rightBtn');
 const jumpBtn = document.getElementById('jumpBtn');
 
-function setupTouchControls(btn, key) {
+function setupTouchControls(btn, code) {
     btn.addEventListener('touchstart', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        keys[key] = true;
+        keys[code] = true;
     }, { passive: false });
+
     btn.addEventListener('touchend', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        keys[key] = false;
+        keys[code] = false;
     }, { passive: false });
+
     // Fallback for desktop testing
     btn.addEventListener('mousedown', (e) => {
         e.preventDefault();
-        keys[key] = true;
+        keys[code] = true;
     });
     btn.addEventListener('mouseup', (e) => {
         e.preventDefault();
-        keys[key] = false;
+        keys[code] = false;
     });
 }
 
+// Map the touch buttons to ArrowLeft, ArrowRight, and Space
 setupTouchControls(leftBtn, 'ArrowLeft');
 setupTouchControls(rightBtn, 'ArrowRight');
-setupTouchControls(jumpBtn, ' ');
+setupTouchControls(jumpBtn, 'Space');
 
 // Keyboard controls for PC
 window.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === ' ') {
+    // Use e.code for consistent 'Space' vs. ' '
+    if (['ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
         e.preventDefault();
-        keys[e.key] = true;
+        keys[e.code] = true;
     }
 });
 window.addEventListener('keyup', (e) => {
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === ' ') {
+    if (['ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
         e.preventDefault();
-        keys[e.key] = false;
+        keys[e.code] = false;
     }
 });
 
@@ -163,6 +167,7 @@ function update() {
             resetGame();
             gameOverText.style.display = 'none';
         }, { once: true, passive: false });
+
         window.addEventListener('keydown', (e) => {
             if (e.key === 'r') {
                 e.preventDefault();
@@ -180,15 +185,20 @@ function update() {
     // Movement
     if (keys['ArrowRight']) {
         player.x += player.speed * scaleX;
-        if (player.x > canvas.width / 2) scrollOffset += player.speed * scaleX;
+        // Scroll offset
+        if (player.x > canvas.width / 2) {
+            scrollOffset += player.speed * scaleX;
+        }
     }
     if (keys['ArrowLeft'] && player.x > 50 * scaleX) {
         player.x -= player.speed * scaleX;
     }
-    if (keys[' '] && !player.jumping) {
-        player.velY = player.powerUp === 'jump' ? -15 * scaleY : -12 * scaleY;
+    if (keys['Space'] && !player.jumping) {
+        // Jump
+        player.velY = (player.powerUp === 'jump') ? -15 * scaleY : -12 * scaleY;
         player.jumping = true;
-        keys[' '] = false;
+        // Immediately reset the jump key so it doesn't keep applying
+        keys['Space'] = false;
     }
 
     // Physics
@@ -220,15 +230,23 @@ function update() {
             height: enemy.height * scaleY
         };
         if (enemy.type === 'basic') {
-            enemy.x -= enemy.speed * scaleX;
-            if (enemy.x * scaleX < -enemy.width * scaleX) enemy.x = 800 + scrollOffset / scaleX;
+            // Move enemy left
+            enemy.x -= enemy.speed;
+            // If it moves too far left, reset it
+            if (enemy.x * scaleX < -enemy.width * scaleX) {
+                enemy.x = 800 + scrollOffset / scaleX;
+            }
         }
+        // Player collision with enemy
         if (collides(player, scaledEnemy)) {
             player.health--;
+            // Reset player position
             player.x = 50 * scaleX;
             player.y = 300 * scaleY;
             scrollOffset = 0;
-            if (player.health <= 0) gameOver = true;
+            if (player.health <= 0) {
+                gameOver = true;
+            }
         }
     });
 
@@ -243,7 +261,9 @@ function update() {
         if (powerUp.active && collides(player, scaledPowerUp)) {
             powerUp.active = false;
             player.powerUp = powerUp.type;
-            if (powerUp.type === 'speed') player.speed = 8;
+            if (powerUp.type === 'speed') {
+                player.speed = 8;
+            }
             setTimeout(() => {
                 player.powerUp = null;
                 player.speed = 5;
@@ -274,6 +294,7 @@ function update() {
             height: level.door.height * scaleY
         };
         if (collides(player, scaledDoor) && player.keys > 0) {
+            // Go to next level
             currentLevel = level.door.nextLevel;
             player.x = 50 * scaleX;
             player.y = 300 * scaleY;
@@ -292,10 +313,13 @@ function update() {
         };
         if (collides(player, scaledObstacle)) {
             player.health--;
+            // Reset player
             player.x = 50 * scaleX;
             player.y = 300 * scaleY;
             scrollOffset = 0;
-            if (player.health <= 0) gameOver = true;
+            if (player.health <= 0) {
+                gameOver = true;
+            }
         }
     });
 
@@ -305,30 +329,55 @@ function update() {
     // Platforms
     level.platforms.forEach(platform => {
         ctx.fillStyle = '#654321';
-        ctx.fillRect(platform.x * scaleX - scrollOffset, platform.y * scaleY, platform.width * scaleX, platform.height * scaleY);
+        ctx.fillRect(
+            platform.x * scaleX - scrollOffset,
+            platform.y * scaleY,
+            platform.width * scaleX,
+            platform.height * scaleY
+        );
     });
 
     // Obstacles
     level.obstacles.forEach(obstacle => {
         ctx.fillStyle = '#FF4500';
-        ctx.fillRect(obstacle.x * scaleX - scrollOffset, obstacle.y * scaleY, obstacle.width * scaleX, obstacle.height * scaleY);
+        ctx.fillRect(
+            obstacle.x * scaleX - scrollOffset,
+            obstacle.y * scaleY,
+            obstacle.width * scaleX,
+            obstacle.height * scaleY
+        );
     });
 
     // Player
     ctx.fillStyle = player.powerUp ? '#FFD700' : '#FF0000';
-    ctx.fillRect(player.x, player.y, player.width * scaleX, player.height * scaleY);
+    ctx.fillRect(
+        player.x,
+        player.y,
+        player.width * scaleX,
+        player.height * scaleY
+    );
 
     // Enemies
     level.enemies.forEach(enemy => {
-        ctx.fillStyle = enemy.type === 'boss' ? '#800080' : '#00FF00';
-        ctx.fillRect(enemy.x * scaleX - scrollOffset, enemy.y * scaleY, enemy.width * scaleX, enemy.height * scaleY);
+        ctx.fillStyle = (enemy.type === 'boss') ? '#800080' : '#00FF00';
+        ctx.fillRect(
+            enemy.x * scaleX - scrollOffset,
+            enemy.y * scaleY,
+            enemy.width * scaleX,
+            enemy.height * scaleY
+        );
     });
 
     // Power-ups
     level.powerUps.forEach(powerUp => {
         if (powerUp.active) {
-            ctx.fillStyle = powerUp.type === 'speed' ? '#0000FF' : '#00FFFF';
-            ctx.fillRect(powerUp.x * scaleX - scrollOffset, powerUp.y * scaleY, powerUp.width * scaleX, powerUp.height * scaleY);
+            ctx.fillStyle = (powerUp.type === 'speed') ? '#0000FF' : '#00FFFF';
+            ctx.fillRect(
+                powerUp.x * scaleX - scrollOffset,
+                powerUp.y * scaleY,
+                powerUp.width * scaleX,
+                powerUp.height * scaleY
+            );
         }
     });
 
@@ -336,20 +385,30 @@ function update() {
     level.keys.forEach(key => {
         if (key.active) {
             ctx.fillStyle = '#FFFF00';
-            ctx.fillRect(key.x * scaleX - scrollOffset, key.y * scaleY, key.width * scaleX, key.height * scaleY);
+            ctx.fillRect(
+                key.x * scaleX - scrollOffset,
+                key.y * scaleY,
+                key.width * scaleX,
+                key.height * scaleY
+            );
         }
     });
 
     // Door
     if (level.door) {
         ctx.fillStyle = '#8B4513';
-        ctx.fillRect(level.door.x * scaleX - scrollOffset, level.door.y * scaleY, level.door.width * scaleX, level.door.height * scaleY);
+        ctx.fillRect(
+            level.door.x * scaleX - scrollOffset,
+            level.door.y * scaleY,
+            level.door.width * scaleX,
+            level.door.height * scaleY
+        );
     }
 
     // HUD
     ctx.fillStyle = '#FFFFFF';
     ctx.font = `${20 * scaleY}px Arial`;
-    ctx.fillText(`Health: ${player.health} Keys: ${player.keys}`, 10 * scaleX, 30 * scaleY);
+    ctx.fillText(`Health: ${player.health}  Keys: ${player.keys}`, 10 * scaleX, 30 * scaleY);
 
     requestAnimationFrame(update);
 }
@@ -365,10 +424,13 @@ function resetGame() {
     player.speed = 5;
     scrollOffset = 0;
     currentLevel = 0;
+
+    // Reset all powerUps and keys in every level
     levels.forEach(level => {
         level.powerUps.forEach(p => p.active = true);
         level.keys.forEach(k => k.active = true);
     });
+
     gameOver = false;
 }
 
