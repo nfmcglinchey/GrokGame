@@ -1,27 +1,26 @@
+console.log("Game.js loaded and running");
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const gameOverText = document.getElementById('gameOver');
 
-// Fullscreen canvas adjustment
 function resizeCanvas() {
     const aspectRatio = 2 / 1;
     let width = window.innerWidth;
     let height = window.innerHeight;
-    
     if (width / height > aspectRatio) {
         width = height * aspectRatio;
     } else {
         height = width / aspectRatio;
     }
-    
     canvas.width = width;
     canvas.height = height;
+    console.log("Canvas resized:", canvas.width, canvas.height);
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', resizeCanvas);
 
-// Game objects
 const player = {
     x: 50,
     y: 300,
@@ -35,7 +34,6 @@ const player = {
     health: 3
 };
 
-// Levels (scaled to 800x400 base)
 const levels = [
     {
         platforms: [
@@ -79,7 +77,6 @@ const levels = [
     }
 ];
 
-// Game variables
 let currentLevel = 0;
 let keys = {};
 const gravity = 0.5;
@@ -87,7 +84,6 @@ const friction = 0.8;
 let scrollOffset = 0;
 let gameOver = false;
 
-// Touch controls
 const leftBtn = document.getElementById('leftBtn');
 const rightBtn = document.getElementById('rightBtn');
 const jumpBtn = document.getElementById('jumpBtn');
@@ -95,25 +91,25 @@ const jumpBtn = document.getElementById('jumpBtn');
 function handleTouchStart(e) {
     e.preventDefault();
     keys[this.id === 'leftBtn' ? 'ArrowLeft' : this.id === 'rightBtn' ? 'ArrowRight' : ' '] = true;
+    console.log("Touch start:", this.id);
 }
 
 function handleTouchEnd(e) {
     e.preventDefault();
     keys[this.id === 'leftBtn' ? 'ArrowLeft' : this.id === 'rightBtn' ? 'ArrowRight' : ' '] = false;
+    console.log("Touch end:", this.id);
 }
 
 [leftBtn, rightBtn, jumpBtn].forEach(btn => {
     btn.addEventListener('touchstart', handleTouchStart);
     btn.addEventListener('touchend', handleTouchEnd);
-    btn.addEventListener('mousedown', handleTouchStart); // For desktop testing
+    btn.addEventListener('mousedown', handleTouchStart);
     btn.addEventListener('mouseup', handleTouchEnd);
 });
 
-// Prevent default browser behaviors
 document.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
 document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
 
-// Collision detection
 function collides(a, b) {
     return a.x < b.x + b.width &&
            a.x + a.width > b.x &&
@@ -121,8 +117,8 @@ function collides(a, b) {
            a.y + a.height > b.y;
 }
 
-// Game loop
 function update() {
+    console.log("Update loop running");
     if (gameOver) {
         if (keys['r'] || keys['touch']) {
             resetGame();
@@ -135,7 +131,6 @@ function update() {
     const scaleX = canvas.width / 800;
     const scaleY = canvas.height / 400;
 
-    // Player movement
     if (keys['ArrowRight']) {
         player.x += player.speed * scaleX;
         if (player.x > canvas.width / 2) scrollOffset += player.speed * scaleX;
@@ -149,12 +144,10 @@ function update() {
         keys[' '] = false;
     }
 
-    // Physics
     player.velY += gravity;
     player.y += player.velY * scaleY;
     player.velY *= friction;
 
-    // Platform collision
     level.platforms.forEach(platform => {
         const scaledPlatform = {
             x: platform.x * scaleX,
@@ -169,7 +162,6 @@ function update() {
         }
     });
 
-    // Enemy movement and collision
     level.enemies.forEach(enemy => {
         const scaledEnemy = {
             x: enemy.x * scaleX,
@@ -190,7 +182,6 @@ function update() {
         }
     });
 
-    // Power-up collision
     level.powerUps.forEach(powerUp => {
         const scaledPowerUp = {
             x: powerUp.x * scaleX,
@@ -209,7 +200,6 @@ function update() {
         }
     });
 
-    // Key collection
     level.keys.forEach(key => {
         const scaledKey = {
             x: key.x * scaleX,
@@ -223,7 +213,6 @@ function update() {
         }
     });
 
-    // Door interaction
     if (level.door) {
         const scaledDoor = {
             x: level.door.x * scaleX,
@@ -240,7 +229,6 @@ function update() {
         }
     }
 
-    // Obstacle collision
     level.obstacles.forEach(obstacle => {
         const scaledObstacle = {
             x: obstacle.x * scaleX,
@@ -257,34 +245,29 @@ function update() {
         }
     });
 
-    // Drawing
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.scale(scaleX, scaleY);
+    console.log("Drawing started");
 
-    // Draw level
     level.platforms.forEach(platform => {
         ctx.fillStyle = '#654321';
         ctx.fillRect(platform.x - scrollOffset / scaleX, platform.y, platform.width, platform.height);
     });
 
-    // Draw obstacles
     level.obstacles.forEach(obstacle => {
         ctx.fillStyle = '#FF4500';
         ctx.fillRect(obstacle.x - scrollOffset / scaleX, obstacle.y, obstacle.width, obstacle.height);
     });
 
-    // Draw player
     ctx.fillStyle = player.powerUp ? '#FFD700' : '#FF0000';
     ctx.fillRect(player.x / scaleX, player.y / scaleY, player.width, player.height);
 
-    // Draw enemies
     level.enemies.forEach(enemy => {
         ctx.fillStyle = enemy.type === 'boss' ? '#800080' : '#00FF00';
         ctx.fillRect(enemy.x - scrollOffset / scaleX, enemy.y, enemy.width, enemy.height);
     });
 
-    // Draw power-ups
     level.powerUps.forEach(powerUp => {
         if (powerUp.active) {
             ctx.fillStyle = powerUp.type === 'speed' ? '#0000FF' : '#00FFFF';
@@ -292,7 +275,6 @@ function update() {
         }
     });
 
-    // Draw keys
     level.keys.forEach(key => {
         if (key.active) {
             ctx.fillStyle = '#FFFF00';
@@ -300,20 +282,17 @@ function update() {
         }
     });
 
-    // Draw door
     if (level.door) {
         ctx.fillStyle = '#8B4513';
         ctx.fillRect(level.door.x - scrollOffset / scaleX, level.door.y, level.door.width, level.door.height);
     });
 
-    // Draw HUD
     ctx.fillStyle = '#FFFFFF';
     ctx.font = '20px Arial';
     ctx.fillText(`Health: ${player.health} Keys: ${player.keys}`, 10, 30);
 
     ctx.restore();
 
-    // Game over
     gameOverText.style.display = gameOver ? 'block' : 'none';
     if (gameOver) {
         document.addEventListener('touchstart', () => keys['touch'] = true, { once: true });
@@ -340,5 +319,4 @@ function resetGame() {
     gameOver = false;
 }
 
-// Start game
 update();
