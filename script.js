@@ -2,15 +2,24 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const gameOverText = document.getElementById('gameOver');
 
-// Adjust canvas size
+// Fullscreen canvas adjustment
 function resizeCanvas() {
-    const maxWidth = 800;
     const aspectRatio = 2 / 1;
-    canvas.width = Math.min(window.innerWidth, maxWidth);
-    canvas.height = canvas.width / aspectRatio;
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    
+    if (width / height > aspectRatio) {
+        width = height * aspectRatio;
+    } else {
+        height = width / aspectRatio;
+    }
+    
+    canvas.width = width;
+    canvas.height = height;
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', resizeCanvas);
 
 // Game objects
 const player = {
@@ -26,7 +35,7 @@ const player = {
     health: 3
 };
 
-// Levels
+// Levels (scaled to 800x400 base)
 const levels = [
     {
         platforms: [
@@ -83,20 +92,26 @@ const leftBtn = document.getElementById('leftBtn');
 const rightBtn = document.getElementById('rightBtn');
 const jumpBtn = document.getElementById('jumpBtn');
 
-leftBtn.addEventListener('touchstart', () => keys['ArrowLeft'] = true);
-leftBtn.addEventListener('touchend', () => keys['ArrowLeft'] = false);
-rightBtn.addEventListener('touchstart', () => keys['ArrowRight'] = true);
-rightBtn.addEventListener('touchend', () => keys['ArrowRight'] = false);
-jumpBtn.addEventListener('touchstart', () => keys[' '] = true);
-jumpBtn.addEventListener('touchend', () => keys[' '] = false);
+function handleTouchStart(e) {
+    e.preventDefault();
+    keys[this.id === 'leftBtn' ? 'ArrowLeft' : this.id === 'rightBtn' ? 'ArrowRight' : ' '] = true;
+}
 
-// Keyboard controls (for desktop)
-document.addEventListener('keydown', (e) => keys[e.key] = true);
-document.addEventListener('keyup', (e) => keys[e.key] = false);
+function handleTouchEnd(e) {
+    e.preventDefault();
+    keys[this.id === 'leftBtn' ? 'ArrowLeft' : this.id === 'rightBtn' ? 'ArrowRight' : ' '] = false;
+}
 
-// Prevent default touch behaviors on canvas
-canvas.addEventListener('touchstart', (e) => e.preventDefault());
-canvas.addEventListener('touchmove', (e) => e.preventDefault());
+[leftBtn, rightBtn, jumpBtn].forEach(btn => {
+    btn.addEventListener('touchstart', handleTouchStart);
+    btn.addEventListener('touchend', handleTouchEnd);
+    btn.addEventListener('mousedown', handleTouchStart); // For desktop testing
+    btn.addEventListener('mouseup', handleTouchEnd);
+});
+
+// Prevent default browser behaviors
+document.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
 
 // Collision detection
 function collides(a, b) {
@@ -109,7 +124,7 @@ function collides(a, b) {
 // Game loop
 function update() {
     if (gameOver) {
-        if (keys['r'] || (navigator.maxTouchPoints > 0 && keys['touch'])) {
+        if (keys['r'] || keys['touch']) {
             resetGame();
             keys['touch'] = false;
         }
@@ -117,30 +132,38 @@ function update() {
     }
 
     const level = levels[currentLevel];
+    const scaleX = canvas.width / 800;
+    const scaleY = canvas.height / 400;
 
     // Player movement
     if (keys['ArrowRight']) {
-        player.x += player.speed;
-        if (player.x > canvas.width / 2) scrollOffset += player.speed;
+        player.x += player.speed * scaleX;
+        if (player.x > canvas.width / 2) scrollOffset += player.speed * scaleX;
     }
-    if (keys['ArrowLeft'] && player.x > 50) {
-        player.x -= player.speed;
+    if (keys['ArrowLeft'] && player.x > 50 * scaleX) {
+        player.x -= player.speed * scaleX;
     }
     if (keys[' '] && !player.jumping) {
         player.velY = player.powerUp === 'jump' ? -15 : -12;
         player.jumping = true;
-        keys[' '] = false; // Prevent continuous jumping on mobile
+        keys[' '] = false;
     }
 
     // Physics
     player.velY += gravity;
-    player.y += player.velY;
+    player.y += player.velY * scaleY;
     player.velY *= friction;
 
     // Platform collision
     level.platforms.forEach(platform => {
-        if (collides(player, platform) && player.velY > 0) {
-            player.y = platform.y - player.height;
+        const scaledPlatform = {
+            x: platform.x * scaleX,
+            y: platform.y * scaleY,
+            width: platform.width * scaleX,
+            height: platform.height * scaleY
+        };
+        if (collides(player, scaledPlatform) && player.velY > 0) {
+            player.y = scaledPlatform.y - player.height;
             player.velY = 0;
             player.jumping = false;
         }
@@ -148,14 +171,20 @@ function update() {
 
     // Enemy movement and collision
     level.enemies.forEach(enemy => {
+        const scaledEnemy = {
+            x: enemy.x * scaleX,
+            y: enemy.y * scaleY,
+            width: enemy.width * scaleX,
+            height: enemy.height * scaleY
+        };
         if (enemy.type === 'basic') {
-            enemy.x -= enemy.speed;
-            if (enemy.x < -enemy.width) enemy.x = canvas.width + scrollOffset;
+            enemy.x -= enemy.speed * scaleX;
+            if (enemy.x < -enemy.width) enemy.x = 800 + scrollOffset / scaleX;
         }
-        if (collides(player, enemy)) {
+        if (collides(player, scaledEnemy)) {
             player.health--;
-            player.x = 50;
-            player.y = 300;
+            player.x = 50 * scaleX;
+            player.y = 300 * scaleY;
             scrollOffset = 0;
             if (player.health <= 0) gameOver = true;
         }
@@ -163,7 +192,13 @@ function update() {
 
     // Power-up collision
     level.powerUps.forEach(powerUp => {
-        if (powerUp.active && collides(player, powerUp)) {
+        const scaledPowerUp = {
+            x: powerUp.x * scaleX,
+            y: powerUp.y * scaleY,
+            width: powerUp.width * scaleX,
+            height: powerUp.height * scaleY
+        };
+        if (powerUp.active && collides(player, scaledPowerUp)) {
             powerUp.active = false;
             player.powerUp = powerUp.type;
             if (powerUp.type === 'speed') player.speed = 8;
@@ -176,27 +211,47 @@ function update() {
 
     // Key collection
     level.keys.forEach(key => {
-        if (key.active && collides(player, key)) {
+        const scaledKey = {
+            x: key.x * scaleX,
+            y: key.y * scaleY,
+            width: key.width * scaleX,
+            height: key.height * scaleY
+        };
+        if (key.active && collides(player, scaledKey)) {
             key.active = false;
             player.keys++;
         }
     });
 
     // Door interaction
-    if (level.door && collides(player, level.door) && player.keys > 0) {
-        currentLevel = level.door.nextLevel;
-        player.x = 50;
-        player.y = 300;
-        scrollOffset = 0;
-        player.keys--;
+    if (level.door) {
+        const scaledDoor = {
+            x: level.door.x * scaleX,
+            y: level.door.y * scaleY,
+            width: level.door.width * scaleX,
+            height: level.door.height * scaleY
+        };
+        if (collides(player, scaledDoor) && player.keys > 0) {
+            currentLevel = level.door.nextLevel;
+            player.x = 50 * scaleX;
+            player.y = 300 * scaleY;
+            scrollOffset = 0;
+            player.keys--;
+        }
     }
 
     // Obstacle collision
     level.obstacles.forEach(obstacle => {
-        if (collides(player, obstacle)) {
+        const scaledObstacle = {
+            x: obstacle.x * scaleX,
+            y: obstacle.y * scaleY,
+            width: obstacle.width * scaleX,
+            height: obstacle.height * scaleY
+        };
+        if (collides(player, scaledObstacle)) {
             player.health--;
-            player.x = 50;
-            player.y = 300;
+            player.x = 50 * scaleX;
+            player.y = 300 * scaleY;
             scrollOffset = 0;
             if (player.health <= 0) gameOver = true;
         }
@@ -204,39 +259,36 @@ function update() {
 
     // Drawing
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Scale drawing to canvas size
-    const scaleX = canvas.width / 800;
-    const scaleY = canvas.height / 400;
+    ctx.save();
     ctx.scale(scaleX, scaleY);
 
     // Draw level
     level.platforms.forEach(platform => {
         ctx.fillStyle = '#654321';
-        ctx.fillRect(platform.x - scrollOffset, platform.y, platform.width, platform.height);
+        ctx.fillRect(platform.x - scrollOffset / scaleX, platform.y, platform.width, platform.height);
     });
 
     // Draw obstacles
     level.obstacles.forEach(obstacle => {
         ctx.fillStyle = '#FF4500';
-        ctx.fillRect(obstacle.x - scrollOffset, obstacle.y, obstacle.width, obstacle.height);
+        ctx.fillRect(obstacle.x - scrollOffset / scaleX, obstacle.y, obstacle.width, obstacle.height);
     });
 
     // Draw player
     ctx.fillStyle = player.powerUp ? '#FFD700' : '#FF0000';
-    ctx.fillRect(player.x, player.y, player.width, player.height);
+    ctx.fillRect(player.x / scaleX, player.y / scaleY, player.width, player.height);
 
     // Draw enemies
     level.enemies.forEach(enemy => {
         ctx.fillStyle = enemy.type === 'boss' ? '#800080' : '#00FF00';
-        ctx.fillRect(enemy.x - scrollOffset, enemy.y, enemy.width, enemy.height);
+        ctx.fillRect(enemy.x - scrollOffset / scaleX, enemy.y, enemy.width, enemy.height);
     });
 
     // Draw power-ups
     level.powerUps.forEach(powerUp => {
         if (powerUp.active) {
             ctx.fillStyle = powerUp.type === 'speed' ? '#0000FF' : '#00FFFF';
-            ctx.fillRect(powerUp.x - scrollOffset, powerUp.y, powerUp.width, powerUp.height);
+            ctx.fillRect(powerUp.x - scrollOffset / scaleX, powerUp.y, powerUp.width, powerUp.height);
         }
     });
 
@@ -244,36 +296,37 @@ function update() {
     level.keys.forEach(key => {
         if (key.active) {
             ctx.fillStyle = '#FFFF00';
-            ctx.fillRect(key.x - scrollOffset, key.y, key.width, key.height);
+            ctx.fillRect(key.x - scrollOffset / scaleX, key.y, key.width, key.height);
         }
     });
 
     // Draw door
     if (level.door) {
         ctx.fillStyle = '#8B4513';
-        ctx.fillRect(level.door.x - scrollOffset, level.door.y, level.door.width, level.door.height);
-    }
+        ctx.fillRect(level.door.x - scrollOffset / scaleX, level.door.y, level.door.width, level.door.height);
+    });
 
     // Draw HUD
     ctx.fillStyle = '#FFFFFF';
     ctx.font = '20px Arial';
     ctx.fillText(`Health: ${player.health} Keys: ${player.keys}`, 10, 30);
 
-    // Reset scale
-    ctx.scale(1 / scaleX, 1 / scaleY);
+    ctx.restore();
 
     // Game over
     gameOverText.style.display = gameOver ? 'block' : 'none';
     if (gameOver) {
-        canvas.addEventListener('touchstart', () => keys['touch'] = true, { once: true });
+        document.addEventListener('touchstart', () => keys['touch'] = true, { once: true });
     }
 
     requestAnimationFrame(update);
 }
 
 function resetGame() {
-    player.x = 50;
-    player.y = 300;
+    const scaleX = canvas.width / 800;
+    const scaleY = canvas.height / 400;
+    player.x = 50 * scaleX;
+    player.y = 300 * scaleY;
     player.health = 3;
     player.keys = 0;
     player.powerUp = null;
