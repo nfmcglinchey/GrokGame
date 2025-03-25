@@ -3,10 +3,8 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const gameOverText = document.getElementById('gameOver');
 
-// Check for canvas support
 if (!canvas || !ctx) {
     alert("Canvas not supported on this device.");
-    // Stop execution without using return
     throw new Error("Canvas not supported");
 }
 
@@ -97,25 +95,45 @@ const leftBtn = document.getElementById('leftBtn');
 const rightBtn = document.getElementById('rightBtn');
 const jumpBtn = document.getElementById('jumpBtn');
 
-function setupControls(btn, key) {
+function setupTouchControls(btn, key) {
     btn.addEventListener('touchstart', (e) => {
         e.preventDefault();
         keys[key] = true;
-    });
+    }, { passive: false });
     btn.addEventListener('touchend', (e) => {
         e.preventDefault();
         keys[key] = false;
-    });
+    }, { passive: false });
+    // Fallback for desktop testing
     btn.addEventListener('mousedown', () => keys[key] = true);
     btn.addEventListener('mouseup', () => keys[key] = false);
 }
 
-setupControls(leftBtn, 'ArrowLeft');
-setupControls(rightBtn, 'ArrowRight');
-setupControls(jumpBtn, ' ');
+setupTouchControls(leftBtn, 'ArrowLeft');
+setupTouchControls(rightBtn, 'ArrowRight');
+setupTouchControls(jumpBtn, ' ');
 
-document.body.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
-document.body.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+// Keyboard controls for PC
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        keys[e.key] = true;
+    }
+});
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        keys[e.key] = false;
+    }
+});
+
+// Prevent default touch behaviors
+document.body.addEventListener('touchstart', (e) => {
+    if (!e.target.closest('#controls')) e.preventDefault();
+}, { passive: false });
+document.body.addEventListener('touchmove', (e) => {
+    if (!e.target.closest('#controls')) e.preventDefault();
+}, { passive: false });
 
 // Collision detection
 function collides(a, b) {
@@ -132,6 +150,12 @@ function update() {
         document.addEventListener('touchstart', () => {
             resetGame();
             gameOverText.style.display = 'none';
+        }, { once: true });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r') {
+                resetGame();
+                gameOverText.style.display = 'none';
+            }
         }, { once: true });
         return;
     }
