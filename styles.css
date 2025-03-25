@@ -75,9 +75,3 @@ html, body {
         bottom: 10px;
     }
 }
-
-@media (min-width: 801px) {
-    #controls {
-        display: none;
-    }
-}
