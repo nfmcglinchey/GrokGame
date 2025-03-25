@@ -1,1 +1,21 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Platformer Adventure</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="gameOver">Game Over - Tap to Restart</div>
+        <div id="controls">
+            <button id="leftBtn">◄</button>
+            <button id="rightBtn">►</button>
+            <button id="jumpBtn">▲</button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
