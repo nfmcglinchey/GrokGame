@@ -1,70 +1,83 @@
-body {
+html, body {
     margin: 0;
     padding: 0;
+    height: 100%;
+    width: 100%;
     overflow: hidden;
     background: #333;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .game-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
     flex-direction: column;
-    position: relative;
+    align-items: center;
+    justify-content: center;
 }
 
 #gameCanvas {
-    border: 2px solid black;
-    background: #87CEEB;
     width: 100%;
+    height: 100%;
     max-width: 800px;
-    height: auto;
-    aspect-ratio: 2 / 1; /* Maintain 2:1 aspect ratio */
-    touch-action: none; /* Prevent default touch behaviors */
+    max-height: 400px;
+    background: #87CEEB;
+    border: 2px solid black;
+    touch-action: none;
 }
 
 #gameOver {
     position: absolute;
     display: none;
     color: white;
-    font-size: 8vw; /* Responsive font size */
+    font-size: 10vw;
     text-align: center;
     width: 100%;
-    max-width: 800px;
     top: 50%;
     transform: translateY(-50%);
+    pointer-events: none;
 }
 
 #controls {
-    position: absolute;
-    bottom: 10px;
-    width: 100%;
+    position: fixed;
+    bottom: 5%;
+    width: 90%;
     max-width: 800px;
     display: flex;
     justify-content: space-between;
-    padding: 0 10px;
-    box-sizing: border-box;
+    z-index: 10;
 }
 
 #controls button {
-    width: 60px;
-    height: 60px;
-    font-size: 30px;
+    width: 20vw;
+    height: 20vw;
+    max-width: 80px;
+    max-height: 80px;
+    font-size: 8vw;
     border: none;
-    border-radius: 10px;
-    background: #555;
+    border-radius: 15px;
+    background: rgba(85, 85, 85, 0.8);
     color: white;
-    cursor: pointer;
-    touch-action: manipulation; /* Improve touch responsiveness */
+    touch-action: manipulation;
 }
 
 #controls button:active {
-    background: #777;
+    background: rgba(119, 119, 119, 0.8);
+}
+
+@media (orientation: landscape) {
+    #controls {
+        bottom: 10px;
+    }
 }
 
 @media (min-width: 801px) {
     #controls {
-        display: none; /* Hide touch controls on desktop */
+        display: none;
     }
 }
