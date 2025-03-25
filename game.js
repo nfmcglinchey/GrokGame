@@ -98,15 +98,23 @@ const jumpBtn = document.getElementById('jumpBtn');
 function setupTouchControls(btn, key) {
     btn.addEventListener('touchstart', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         keys[key] = true;
     }, { passive: false });
     btn.addEventListener('touchend', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         keys[key] = false;
     }, { passive: false });
     // Fallback for desktop testing
-    btn.addEventListener('mousedown', () => keys[key] = true);
-    btn.addEventListener('mouseup', () => keys[key] = false);
+    btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        keys[key] = true;
+    });
+    btn.addEventListener('mouseup', (e) => {
+        e.preventDefault();
+        keys[key] = false;
+    });
 }
 
 setupTouchControls(leftBtn, 'ArrowLeft');
@@ -114,20 +122,23 @@ setupTouchControls(rightBtn, 'ArrowRight');
 setupTouchControls(jumpBtn, ' ');
 
 // Keyboard controls for PC
-document.addEventListener('keydown', (e) => {
+window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === ' ') {
         e.preventDefault();
         keys[e.key] = true;
     }
 });
-document.addEventListener('keyup', (e) => {
+window.addEventListener('keyup', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === ' ') {
         e.preventDefault();
         keys[e.key] = false;
     }
 });
 
-// Prevent default touch behaviors
+// Ensure canvas can receive focus for keyboard events
+canvas.addEventListener('click', () => canvas.focus());
+
+// Prevent default touch behaviors outside controls
 document.body.addEventListener('touchstart', (e) => {
     if (!e.target.closest('#controls')) e.preventDefault();
 }, { passive: false });
@@ -147,12 +158,14 @@ function collides(a, b) {
 function update() {
     if (gameOver) {
         gameOverText.style.display = 'block';
-        document.addEventListener('touchstart', () => {
+        document.addEventListener('touchstart', (e) => {
+            e.preventDefault();
             resetGame();
             gameOverText.style.display = 'none';
-        }, { once: true });
-        document.addEventListener('keydown', (e) => {
+        }, { once: true, passive: false });
+        window.addEventListener('keydown', (e) => {
             if (e.key === 'r') {
+                e.preventDefault();
                 resetGame();
                 gameOverText.style.display = 'none';
             }
